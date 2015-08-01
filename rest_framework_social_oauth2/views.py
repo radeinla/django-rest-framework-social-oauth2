@@ -28,7 +28,8 @@ class ConvertTokenView(CsrfExemptMixin, OAuthLibMixin, View):
     """
     server_class = SocialTokenServer
     validator_class = oauth2_settings.OAUTH2_VALIDATOR_CLASS
-    oauthlib_backend_class = KeepRequestCore
+    #HACK: newer version requires oauthlib_backend_class instead
+    oauthlib_core_class = KeepRequestCore
 
     def post(self, request, *args, **kwargs):
         url, headers, body, status = self.create_token_response(request)

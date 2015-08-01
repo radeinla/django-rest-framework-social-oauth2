@@ -1,11 +1,17 @@
 # -*- coding: utf-8 -*-
-
 from __future__ import unicode_literals
 
+import logging
+
+from oauthlib.common import Request
+from oauthlib.oauth2.rfc6749.endpoints.base import catch_errors_and_unavailability
 from oauthlib.oauth2.rfc6749.endpoints.token import TokenEndpoint
 from oauthlib.oauth2.rfc6749.tokens import BearerToken
 
 from .oauth2_grants import SocialTokenGrant
+
+
+log = logging.getLogger(__name__)
 
 
 class SocialTokenServer(TokenEndpoint):
@@ -34,3 +40,20 @@ class SocialTokenServer(TokenEndpoint):
                                    'convert_token': refresh_grant,
                                },
                                default_token_type=bearer)
+
+    @catch_errors_and_unavailability
+    def create_token_response(self, uri, http_method='GET', body=None,
+                              headers=None, credentials=None):
+        """Extract grant_type and route to the designated handler."""
+        request = Request(
+            uri, http_method=http_method, body=body, headers=headers)
+        # HACK: uses internal property for the workaround instead of relying on headers
+        request._original_headers = headers
+        request.scopes = None
+        request.extra_credentials = credentials
+        grant_type_handler = self.grant_types.get(request.grant_type,
+                                                  self.default_grant_type_handler)
+        log.debug('Dispatching grant_type %s request to %r.',
+                  request.grant_type, grant_type_handler)
+        return grant_type_handler.create_token_response(
+            request, self.default_token_type)
